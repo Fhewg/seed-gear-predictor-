@@ -11,26 +11,27 @@ local TimeZones = {
 
 local currentTZIndex = 1
 
+local WEEK_DAYS_RU = {"Вс","Пн","Вт","Ср","Чт","Пт","Сб"}
+
 local function utcToTzTime(utcTimestamp, offsetSeconds)
     return utcTimestamp + offsetSeconds
 end
-
-local WEEK_DAYS_RU = {"Вс","Пн","Вт","Ср","Чт","Пт","Сб"}
 
 local function formatRestockInterval(seed, tzOffset)
     local startUtc = seed * RESTOCK_INTERVAL
     local start = utcToTzTime(startUtc, tzOffset)
     local finish = start + RESTOCK_INTERVAL - 1
-    local w = tonumber(os.date("%w", start)) or 0
-    local dayRu = WEEK_DAYS_RU[w+1] or os.date("%a", start)
-    local st = os.date("*t", start)
-    local fn = os.date("*t", finish)
+    local w = tonumber(os.date("!%w", start)) or 0
+    local dayRu = WEEK_DAYS_RU[w+1] or os.date("!%a", start)
+    local st = os.date("!*t", start)
+    local fn = os.date("!*t", finish)
     return string.format("%s %s, %02d:%02d-%02d:%02d", dayRu,
-        os.date("%d.%m.%Y", start),
+        os.date("!%d.%m.%Y", start),
         st.hour, st.min,
         fn.hour, fn.min)
 end
 
+-- Создаём угли гуй
 local CoreGui = game:GetService("CoreGui")
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "UgliGui_Predictor"
@@ -49,16 +50,6 @@ local TitleBar = Instance.new("Frame", MainFrame)
 TitleBar.Size = UDim2.new(1, 0, 0, 30)
 TitleBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
 TitleBar.Name = "TitleBar"
-
-local Title = Instance.new("TextLabel", TitleBar)
-Title.Size = UDim2.new(1, -14, 1, 0)
-Title.Position = UDim2.new(0, 7, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "" -- убрал текст
-Title.TextColor3 = Color3.new(1,1,1)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 14
-Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local TzLabel = Instance.new("TextLabel", TitleBar)
 TzLabel.Size = UDim2.new(0, 120, 1, 0)
@@ -268,14 +259,15 @@ function RefreshPredictor()
 
     local currentSeed = math.floor(workspace:GetServerTimeNow() / RESTOCK_INTERVAL)
 
-    -- Семена (только если есть появления)
+    CreateLabel(PredictorScroll, "=== Семена ===")
+
     local seedResults = {}
     for _, key in ipairs(SeedKeyOrdering) do
         local v = SeedData[key]
         if v and v.SeedName then
             local name = v.SeedName
             local occurrences = FindAllOccurrences(name, SeedData, SeedKeyOrdering, "SeedName", LOOKAHEAD_RESTOCKS, currentSeed)
-            if #occurrences > 0 then
+            if #occurrences > 0 then -- создаём кнопку только если были появления
                 seedResults[name] = occurrences
             end
         end
@@ -297,14 +289,15 @@ function RefreshPredictor()
         end)
     end
 
-    -- Инструменты (только если есть появления)
+    CreateLabel(PredictorScroll, "=== Инструменты ===")
+
     local gearResults = {}
     for _, key in ipairs(GearKeyOrdering) do
         local v = GearData[key]
         if v and v.GearName then
             local name = v.GearName
             local occurrences = FindAllOccurrences(name, GearData, GearKeyOrdering, "GearName", LOOKAHEAD_RESTOCKS, currentSeed)
-            if #occurrences > 0 then
+            if #occurrences > 0 then -- только если есть появления
                 gearResults[name] = occurrences
             end
         end
